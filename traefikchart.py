@@ -1,6 +1,8 @@
 import dash
+from dash.dependencies import Input, Output
 import dash_core_components as dcc
 import dash_html_components as html
+from dash.dependencies import Input, Output
 import dash_table
 import plotly.express as px
 import pandas as pd
@@ -17,7 +19,6 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 fig = px.bar(df, y=["Distinct IPs", "Probes"], x="Country", orientation='v', height=500, barmode="stack", range_y=[0,100])
-#fig2 = px.
 
 app.layout = html.Div(children=[
     html.H1(children='Traefik Probes'),
@@ -27,15 +28,17 @@ app.layout = html.Div(children=[
     '''),
 
     dcc.Graph(
-        id='example-graph',
+        id='location-graph',
         figure=fig
     ),
+
+
 
     html.Div(children='''
         Raw Log Data
     '''),
 
-    html.Div(
+    html.Div(children=
         dash_table.DataTable(
     		id='table',
 			style_data={
@@ -73,13 +76,30 @@ app.layout = html.Div(children=[
                     'backgroundColor': 'rgb(248, 248, 248)'
                 }
             ]
-
-#			style_cell={'width': '300px',
-#			'height': '60px',
-#			'textAlign': 'left'}
-        ),   
+        ),
+    ),
+    dcc.Interval(
+    id='interval-component',
+    interval=3*1000, # in milliseconds
+    n_intervals=0
     )
 ])
+
+@app.callback(Output('location-graph', 'figure'),
+              Input('interval-component', 'n_intervals'))
+def update_graph(n):
+    update_con = sl.connect('test.db')
+    update_df = pd.read_sql_query(query1, update_con)
+    fig = px.bar(update_df, y=["Distinct IPs", "Probes"], x="Country", orientation='v', height=500, barmode="stack", range_y=[0,100])
+    fig.update_layout(transition_duration=500)
+    return fig
+
+@app.callback(Output('table', 'data'),
+    Input('interval-component', 'n_intervals'))
+def update_table(n):
+    update_con = sl.connect('test.db')
+    update_df2 = pd.read_sql_query(query2, update_con)
+    return update_df2.to_dict('records')
 
 if __name__ == '__main__':
     app.run_server(debug=True)
